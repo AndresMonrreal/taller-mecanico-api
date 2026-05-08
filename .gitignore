@@ -1,1 +1,18 @@
-.env 
+# Entorno virtual
+venv/
+.venv/
+
+# Variables de entorno
+.env
+
+# Wallet Oracle — nunca subir
+wallet/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Test temporal
+test_conexion.py
