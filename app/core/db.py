@@ -1,24 +1,28 @@
 import oracledb
-from sqlalchemy import create_engine, event
+import os
+from sqlalchemy import create_engine, pool
 from sqlalchemy.orm import sessionmaker, declarative_base
 from .config import settings
 
-oracledb.init_oracle_client()
+wallet_path = os.path.abspath(settings.WALLET_LOCATION)
 
-DATABASE_URL = (
-    f"oracle+oracledb://{settings.DB_USER}:{settings.DB_PASS}"
-    f"@{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_SERVICE}"
-    f"?wallet_location={settings.WALLET_LOCATION}"
-    f"&wallet_password={settings.WALLET_PASSWORD}"
+dsn = "(description= (retry_count=20)(retry_delay=3)(address=(protocol=tcps)(port=1522)(host=adb.us-ashburn-1.oraclecloud.com))(connect_data=(service_name=g0b7cfb77ae7f8d_p1400zpt1kp7z3zp_tp.adb.oraclecloud.com))(security=(ssl_server_dn_match=yes)))"
+
+def get_connection():
+    return oracledb.connect(
+        user=settings.DB_USER,
+        password=settings.DB_PASS,
+        dsn=dsn,
+        wallet_location=wallet_path,
+        wallet_password=settings.WALLET_PASSWORD
+    )
+
+engine = create_engine(
+    "oracle+oracledb://",
+    creator=get_connection,
+    pool_size=5,
+    max_overflow=10
 )
-
-engine = create_engine(DATABASE_URL, pool_size=5, max_overflow=10)
-
-@event.listens_for(engine, "checkout")
-def set_session_context(dbapi_connection, connection_record, connection_proxy):
-    cursor = dbapi_connection.cursor()
-    cursor.execute("BEGIN NULL; END;")
-    cursor.close()
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()

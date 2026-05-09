@@ -8,8 +8,20 @@ class CRUDBase(Generic[ModelType]):
     def __init__(self,model:Type[ModelType]):
         self.model = model
         
+    def get_pagination(self,db:Session,page:int = 1, size:int = 10):
+        total = db.query(self.model).count()
+        data = db.query(self.model).offset((page - 1) * size).limit(size).all()
+        return {
+            "total": total,
+            "page": page,
+            "size": size,
+            "pages": ( total + size - 1) // size,
+            "data": data
+        }    
+        
     def get(self,db:Session,id:int) -> Optional[ModelType]:
-        return db.query(self.model).filter(self.model.id == id).first()
+        pk_column = list(self.model.__table__.primary_key)[0]
+        return db.query(self.model).filter(pk_column == id).first()    
     
     def get_all(self,db:Session, skip: int = 0, limit:int = 100) -> List[ModelType]:
         return db.query(self.model).offset(skip).limit(limit).all()
@@ -30,8 +42,9 @@ class CRUDBase(Generic[ModelType]):
         db.refresh(db_obj)
         return db_obj
     
-    def delete(self,db:Session,id: int) -> ModelType:
-        obj = db.query(self.model).filter(self.model.id == id).first()
+    def delete(self, db: Session, id: int) -> Optional[ModelType]:
+        pk_column = list(self.model.__table__.primary_key)[0]
+        obj = db.query(self.model).filter(pk_column == id).first()
         if obj:
             db.delete(obj)
             db.commit()

@@ -11,7 +11,7 @@ class ServiceOrder(Base):
     srv_id = Column(Integer, ForeignKey("Service.srv_id"), nullable = False)
     ords_hours = Column(Numeric(5, 2), nullable=False)
     ords_total = Column(Numeric(10, 2), nullable=True)
-    ses_id = Column(Integer, ForeignKey("sesiones.ses_id"), nullable=True)
+    ses_id = Column(Integer, ForeignKey("Sessions.ses_id"), nullable=True)
 
     order = relationship("Order", back_populates="services")
     service = relationship("Service", back_populates="service_orders")

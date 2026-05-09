@@ -6,9 +6,10 @@ class Settings(BaseSettings):
     DB_HOST: str
     DB_PORT: str
     DB_SERVICE: str
+    DB_DSN: str
     WALLET_LOCATION: str
     WALLET_PASSWORD: str
-
+    SECRET_KEY: str
     PROJECT_NAME: str = "Taller Pro API"
     API_V1_STR: str = "/api/v1"
 
