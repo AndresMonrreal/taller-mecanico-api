@@ -10,10 +10,12 @@ from app.middleware.logging_middleware import log_requests
 
 from app.routers import clientes, vehiculos, ordenes, servicios, auth, ia
 
-app = FastAPI(title=settings.PROJECT_NAME, root_path=settings.API_V1_STR)
-
+app = FastAPI(title=settings.PROJECT_NAME)
 app.add_middleware(CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=[ "http://localhost:5173",
+        "http://localhost:8080",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:8080",],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"]
@@ -25,12 +27,12 @@ app.add_exception_handler(RequestValidationError, validation_exception_handler)
 app.add_exception_handler(SQLAlchemyError, sqlalchemy_exception_handler)
 app.add_exception_handler(Exception, generic_exception_handler)
 
-app.include_router(auth.router)
-app.include_router(clientes.router)
-app.include_router(vehiculos.router)
-app.include_router(ordenes.router)
-app.include_router(servicios.router)
-app.include_router(ia.router)
+app.include_router(auth.router, prefix=settings.API_V1_STR)
+app.include_router(clientes.router, prefix=settings.API_V1_STR)
+app.include_router(vehiculos.router, prefix=settings.API_V1_STR)
+app.include_router(ordenes.router, prefix=settings.API_V1_STR)
+app.include_router(servicios.router, prefix=settings.API_V1_STR)
+app.include_router(ia.router, prefix=settings.API_V1_STR)
 
 @app.get("/")
 def root():

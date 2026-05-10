@@ -35,7 +35,7 @@ def update_client(cli_id:int, client_in: ClientUpdate, db: Session = Depends(get
 
 @router.delete("/{cli_id}")
 def delete_client(cli_id: int, db: Session = Depends(get_db)):
-    client = crud_client.get(db, cli_id)
+    client = crud_client.delete(db, cli_id)
     if not client:
         raise HTTPException(status_code=404, detail="Client not found")
-    return {"message" : f"Client with id {cli_id} deleted successfully"}
+    return {"message": f"Client {cli_id} deleted"}

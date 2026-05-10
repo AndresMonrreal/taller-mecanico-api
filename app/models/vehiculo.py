@@ -17,4 +17,4 @@ class Vehicle(Base):
     cli_date_mod = Column(DateTime, default = func.now(), onupdate = func.now())
     
     client = relationship("Client", back_populates = "vehicles")
-    orders = relationship("Order", back_populates = "vehicle")
+    orders = relationship("Order", back_populates = "vehicle", cascade="all, delete-orphan")

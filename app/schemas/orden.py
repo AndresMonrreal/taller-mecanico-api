@@ -8,7 +8,7 @@ class ServiceOrderBase(BaseModel):
     ords_hours: Decimal
 
 class ServiceOrderOut(ServiceOrderBase):   
-    ords_id: int
+    srv_ord_id: int
     ords_total: Optional[Decimal] = None
     
     class Config:
@@ -16,7 +16,7 @@ class ServiceOrderOut(ServiceOrderBase):
         
 class OrderBase(BaseModel):
     veh_id: int
-    ord_status: Optional[str] = "Open" 
+    ord_status: Optional[str] = "ABIERTA" 
     ord_notes: Optional[str] = None
     
 class OrderCreate(OrderBase):
@@ -27,6 +27,7 @@ class OrderUpdate(BaseModel):
     ord_status: Optional[str] = None
     ord_notes: Optional[str] = None
     ord_urgency: Optional[str] = None
+    veh_id: Optional[int] = None # Add this if you allow changing the vehicle
     
 class OrderOut(OrderBase):
     ord_id: int

@@ -19,9 +19,11 @@ class CRUDBase(Generic[ModelType]):
             "data": data
         }    
         
-    def get(self,db:Session,id:int) -> Optional[ModelType]:
-        pk_column = list(self.model.__table__.primary_key)[0]
-        return db.query(self.model).filter(pk_column == id).first()    
+    def get(self, db: Session, id: int) -> Optional[ModelType]:
+        pk_col_name = list(self.model.__table__.primary_key)[0].name
+        return db.query(self.model).filter(
+            getattr(self.model, pk_col_name) == id
+        ).first()  
     
     def get_all(self,db:Session, skip: int = 0, limit:int = 100) -> List[ModelType]:
         return db.query(self.model).offset(skip).limit(limit).all()
@@ -43,9 +45,14 @@ class CRUDBase(Generic[ModelType]):
         return db_obj
     
     def delete(self, db: Session, id: int) -> Optional[ModelType]:
-        pk_column = list(self.model.__table__.primary_key)[0]
-        obj = db.query(self.model).filter(pk_column == id).first()
+        pk_col_name = list(self.model.__table__.primary_key)[0].name
+        print(f"Buscando {self.model.__tablename__} con {pk_col_name} = {id}")
+        obj = db.query(self.model).filter(
+            getattr(self.model, pk_col_name) == id
+        ).first()
+        print(f"Encontrado: {obj}")
         if obj:
             db.delete(obj)
             db.commit()
+            print("Eliminado y commiteado")
         return obj

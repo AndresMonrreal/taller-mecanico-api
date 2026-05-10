@@ -13,7 +13,7 @@ class Client(Base):
     cli_date_mod = Column(DateTime, default = func.now(), onupdate = func.now())
     ses_id = Column(Integer, ForeignKey("Sessions.ses_id"), nullable=True)    
     session = relationship("Session")
-    vehicles = relationship("Vehicle", back_populates = "client")
+    vehicles = relationship("Vehicle", back_populates = "client",cascade="all, delete-orphan")
     
 
     

@@ -1,4 +1,4 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     DB_USER: str
@@ -13,7 +13,10 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "Taller Pro API"
     API_V1_STR: str = "/api/v1"
 
-    class Config:
-        env_file = ".env"
-
+    model_config = SettingsConfigDict(
+        extra='ignore', 
+        env_file=".env"
+    )
+    
+    
 settings = Settings()
