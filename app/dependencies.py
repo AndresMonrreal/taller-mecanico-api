@@ -23,3 +23,12 @@ def require_permiso(permiso: int):
             raise HTTPException(status_code=403, detail="Sin permisos suficientes")
         return current_user
     return checker
+
+from app.auth.permissions import tiene_permiso_bd
+
+def require_permiso(permiso: int):
+    def checker(current_user = Depends(get_current_user), db: Session = Depends(get_db)):
+        if not tiene_permiso_bd(db, current_user.usr_rol, permiso):
+            raise HTTPException(status_code=403, detail="Sin permisos suficientes")
+        return current_user
+    return checker

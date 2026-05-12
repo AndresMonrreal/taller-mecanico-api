@@ -4,6 +4,8 @@ from app.core.db import get_db
 from app.crud.orden import crud_orden
 from app.schemas.orden import OrderCreate, OrderOut, OrderUpdate
 from typing import List
+from sqlalchemy import text
+
 
 router = APIRouter(prefix="/ordenes", tags=["ordenes"])
 
@@ -14,6 +16,12 @@ def get_ordenes(db: Session = Depends(get_db)):
     except Exception as e:
         print(f"ERROR GET ORDENES: {e}")
         raise
+    
+
+@router.get("/vista/activas")
+def get_ordenes_activas_vista(db: Session = Depends(get_db)):
+    result = db.execute(text("SELECT * FROM vw_ordenes_activas")).mappings().all()
+    return [dict(r) for r in result]
     
 @router.get("/{ord_id}", response_model=OrderOut)
 def get_orden(ord_id: int, db: Session = Depends(get_db)):
@@ -41,3 +49,27 @@ def delete_orden(ord_id: int, db: Session = Depends(get_db)):
     if not orden:
         raise HTTPException(status_code=404, detail="Orden no encontrada")
     return {"message": "Orden eliminada"}
+
+@router.patch("/{ord_id}/cerrar")
+def cerrar_orden(ord_id: int, db: Session = Depends(get_db)):
+    try:
+        conn = db.connection()
+        cursor = conn.connection.cursor()
+        mensaje = cursor.var(str)
+        cursor.callproc("sp_cerrar_orden", [ord_id, mensaje])
+        cursor.close()
+        db.commit()
+        result = mensaje.getvalue()
+        return {"message": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/{ord_id}/total")
+def get_total_orden(ord_id: int, db: Session = Depends(get_db)):
+    result = db.execute(
+        text("SELECT fn_calcular_total_orden(:ord_id) FROM dual"),
+        {"ord_id": ord_id}
+    ).scalar()
+    return {"ord_id": ord_id, "total": float(result or 0)}
+
+

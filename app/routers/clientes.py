@@ -4,12 +4,19 @@ from app.core.db import get_db
 from app.crud.cliente import crud_client
 from app.schemas.cliente import ClientCreate, ClientUpdate, ClientOut
 from typing import List
+from sqlalchemy import text
+
 
 router = APIRouter(prefix = "/clients", tags = ["Clients"])
 
 @router.get("/", response_model=List[ClientOut])
 def get_clients(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     return crud_client.get_all(db, skip=skip, limit=limit)
+
+@router.get("/vista/resumen")
+def get_resumen_clientes(db: Session = Depends(get_db)):
+    result = db.execute(text("SELECT * FROM vw_resumen_clientes")).mappings().all()
+    return [dict(r) for r in result]
 
 @router.get("/{cli_id}",response_model = ClientOut)
 def get_client(cli_id: int, db: Session = Depends(get_db)):
