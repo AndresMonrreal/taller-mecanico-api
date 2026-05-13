@@ -22,3 +22,10 @@ class Token(BaseModel):
     access_token: str
     token_type: str
     rol: str
+
+class PermisoRolOut(BaseModel):
+    rol_nombre: str
+    permiso_bitmask: int
+
+    class Config:
+        from_attributes = True

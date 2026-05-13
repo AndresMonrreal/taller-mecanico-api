@@ -14,6 +14,7 @@ class CRUDOrden(CRUDBase[Order]):
 
     def create_with_services(self, db: Session, order_data: dict, services: list):
         try:
+            db.begin_nested()
             order = Order(**order_data)
             db.add(order)
             db.flush()

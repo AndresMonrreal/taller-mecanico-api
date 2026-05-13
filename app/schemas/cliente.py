@@ -17,7 +17,7 @@ class ClientUpdate(ClientBase):
     
 class ClientOut(ClientBase):
     cli_id: int
-    cli_date_mod: datetime
+    cli_date_mod: Optional[datetime] = None
 
     class Config:
         from_attributes = True        

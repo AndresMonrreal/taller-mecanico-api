@@ -2,8 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.core.db import get_db
 from app.models.users import User
-from app.schemas.users import UserCreate, UserLogin, UserOut, Token
+from app.models.permiso_rol import PermisoRol
+from app.schemas.users import UserCreate, UserLogin, UserOut, Token, PermisoRolOut
 from app.auth.jwt import hash_password, verify_password, create_access_token
+from typing import List
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -29,3 +31,14 @@ def login(user_in: UserLogin, db: Session = Depends(get_db)):
         raise HTTPException(status_code=401, detail="Credenciales incorrectas")
     token = create_access_token({"sub": usuario.usr_username, "rol": usuario.usr_rol})
     return {"access_token": token, "token_type": "bearer", "rol": usuario.usr_rol}
+
+@router.get("/roles", response_model=List[PermisoRolOut])
+def get_roles(db: Session = Depends(get_db)):
+    return db.query(PermisoRol).all()
+
+@router.get("/permisos/{rol}", response_model=PermisoRolOut)
+def get_permiso_rol(rol: str, db: Session = Depends(get_db)):
+    permiso = db.query(PermisoRol).filter(PermisoRol.rol_nombre == rol).first()
+    if not permiso:
+        raise HTTPException(status_code=404, detail="Rol no encontrado")
+    return permiso
