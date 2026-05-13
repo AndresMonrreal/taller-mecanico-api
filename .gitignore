@@ -16,3 +16,5 @@ __pycache__/
 
 # Test temporal
 test_conexion.py
+
+package-lock.json

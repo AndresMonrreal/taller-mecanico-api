@@ -5,3 +5,4 @@ from app.models.vehiculo import Vehicle
 from app.models.servicio import Service
 from app.models.orden import Order
 from app.models.orden_servicio import ServiceOrder
+from app.models.permiso_rol import PermisoRol
