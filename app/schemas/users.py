@@ -22,6 +22,7 @@ class Token(BaseModel):
     access_token: str
     token_type: str
     rol: str
+    usr_username: str
 
 class PermisoRolOut(BaseModel):
     rol_nombre: str

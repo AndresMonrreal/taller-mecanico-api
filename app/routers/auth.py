@@ -30,7 +30,7 @@ def login(user_in: UserLogin, db: Session = Depends(get_db)):
     if not usuario or not verify_password(user_in.usr_password, usuario.usr_password):
         raise HTTPException(status_code=401, detail="Credenciales incorrectas")
     token = create_access_token({"sub": usuario.usr_username, "rol": usuario.usr_rol})
-    return {"access_token": token, "token_type": "bearer", "rol": usuario.usr_rol}
+    return {"access_token": token, "token_type": "bearer", "rol": usuario.usr_rol, "usr_username": usuario.usr_username}
 
 @router.get("/roles", response_model=List[PermisoRolOut])
 def get_roles(db: Session = Depends(get_db)):

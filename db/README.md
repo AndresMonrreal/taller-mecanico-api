@@ -202,6 +202,107 @@ def cerrar_orden(ord_id: int, db: Session = Depends(get_db)):
 
 ---
 
+## Transacción Distribuida Simulada: `sp_transferir_servicio`
+
+Demostración de **transacción distribuida simulada** usando `PRAGMA AUTONOMOUS_TRANSACTION` + `SAVEPOINT`.
+
+### Arquitectura
+
+```
+┌───────────────────────────────────────────────────────────┐
+│               sp_transferir_servicio                       │
+│  ┌─────────────────────┐    ┌──────────────────────────┐  │
+│  │ TRANSACTION MAIN     │    │ sp_log_transferencia     │  │
+│  │ (SAVEPOINT + ROLLBACK│    │ (AUTONOMOUS TRANSACTION) │  │
+│  │  + COMMIT)           │    │                          │  │
+│  │                      │    │  COMMIT independiente    │  │
+│  │  UPDATE ServiceOrders│    │  (simula sistema remoto) │  │
+│  │  SET ord_id = NEW    │    │                          │  │
+│  └──────────┬───────────┘    └──────────────────────────┘  │
+│             │                            ▲                  │
+│             │    Llamada autónoma ────────┘                  │
+└─────────────┴─────────────────────────────────────────────┘
+```
+
+**Comportamiento distribuido:**
+- Si la TX principal falla → ROLLBACK al SAVEPOINT (no afecta a ServicesOrders)
+- Pero la TX autónoma ya hizo COMMIT → el log en Sessions persiste
+- Esto demuestra el **riesgo de transacciones distribuidas**: una parte puede fallar mientras otra ya confirmó
+
+### Código
+
+```sql
+-- Procedimiento autónomo (simula sistema remoto)
+CREATE OR REPLACE PROCEDURE sp_log_transferencia(
+    p_srv_ord_id IN NUMBER,
+    p_ord_id_old IN NUMBER,
+    p_ord_id_new IN NUMBER
+)
+IS
+    PRAGMA AUTONOMOUS_TRANSACTION;
+BEGIN
+    INSERT INTO "Sessions"(ses_usuario, ses_fecha)
+    VALUES ('DISTRIBUTED_TX', SYSDATE);
+    COMMIT;
+END sp_log_transferencia;
+
+-- Procedimiento principal con transacción distribuida simulada
+CREATE OR REPLACE PROCEDURE sp_transferir_servicio(
+    p_srv_ord_id  IN NUMBER,
+    p_ord_id_new  IN NUMBER,
+    p_mensaje     OUT VARCHAR2
+)
+IS
+    v_old_ord_id    NUMBER;
+    v_old_total     NUMBER;
+    v_ord_status    VARCHAR2(50);
+BEGIN
+    SAVEPOINT sp_transfer_save;
+
+    SELECT ord_id, ords_total INTO v_old_ord_id, v_old_total
+    FROM "ServiceOrders"
+    WHERE srv_ord_id = p_srv_ord_id;
+
+    SELECT ord_status INTO v_ord_status
+    FROM "Orders"
+    WHERE ord_id = p_ord_id_new;
+
+    IF v_ord_status = 'CERRADA' THEN
+        ROLLBACK TO sp_transfer_save;
+        p_mensaje := 'La orden destino está cerrada';
+        RETURN;
+    END IF;
+
+    UPDATE "ServiceOrders"
+    SET ord_id = p_ord_id_new
+    WHERE srv_ord_id = p_srv_ord_id;
+
+    sp_log_transferencia(p_srv_ord_id, v_old_ord_id, p_ord_id_new);
+
+    COMMIT;
+    p_mensaje := 'OK: Servicio transferido (transacción distribuida simulada)';
+
+EXCEPTION
+    WHEN OTHERS THEN
+        ROLLBACK TO sp_transfer_save;
+        p_mensaje := 'Error: ' || SQLERRM;
+        RAISE;
+END sp_transferir_servicio;
+```
+
+### Elementos de la Rúbrica
+
+| Elemento | Implementación |
+|----------|---------------|
+| **SAVEPOINT** | `sp_transfer_save` al inicio de la TX principal |
+| **Transacción Distribuida** | Llamada a `sp_log_transferencia` con `PRAGMA AUTONOMOUS_TRANSACTION` |
+| **COMMIT/ROLLBACK** | COMMIT en éxito, ROLLBACK TO SAVEPOINT en error |
+| **Manejo de Excepciones** | `WHEN OTHERS` con ROLLBACK y RAISE |
+| **Demostración de Riesgo Distribuido** | La TX autónoma COMMITea independientemente de la TX principal |
+| **Parámetro OUT** | `p_mensaje OUT VARCHAR2` retorna resultado |
+
+---
+
 ## Triggers de Auditoría
 
 ### Trigger de Auto-Asignación de `ses_id`
@@ -563,32 +664,39 @@ def get_orden_total(ord_id: int, db: Session = Depends(get_db)):
 
 ## Usuario de Base de Datos
 
-Principio de **mínimos privilegios** — el usuario `taller_app` solo tiene lo necesario para operar:
+Principio de **mínimos privilegios** — el usuario `taller_app` solo tiene lo necesario para operar, a través de un **rol de aplicación** (no grants directos):
 
 ```sql
-CREATE USER taller_app IDENTIFIED BY "TallerApp2026!";
-GRANT CONNECT TO taller_app;
-GRANT CREATE SESSION TO taller_app;
+-- Crear rol de aplicación (Excelente rúbrica: roles de aplicación)
+CREATE ROLE taller_app_rol IDENTIFIED BY "TallerApp2026!";
+GRANT CONNECT TO taller_app_rol;
+GRANT CREATE SESSION TO taller_app_rol;
 
 -- DML en tablas de negocio (sin DDL)
-GRANT SELECT, INSERT, UPDATE, DELETE ON "Clients" TO taller_app;
-GRANT SELECT, INSERT, UPDATE, DELETE ON "Vehicles" TO taller_app;
-GRANT SELECT, INSERT, UPDATE, DELETE ON "Orders" TO taller_app;
-GRANT SELECT, INSERT, UPDATE, DELETE ON "ServiceOrders" TO taller_app;
-GRANT SELECT, INSERT, UPDATE, DELETE ON "Service" TO taller_app;
-GRANT SELECT, INSERT, UPDATE, DELETE ON "Sessions" TO taller_app;
-GRANT SELECT, INSERT, UPDATE, DELETE ON "users" TO taller_app;
-GRANT SELECT, INSERT, UPDATE, DELETE ON permisos_rol TO taller_app;
+GRANT SELECT, INSERT, UPDATE, DELETE ON "Clients" TO taller_app_rol;
+GRANT SELECT, INSERT, UPDATE, DELETE ON "Vehicles" TO taller_app_rol;
+GRANT SELECT, INSERT, UPDATE, DELETE ON "Orders" TO taller_app_rol;
+GRANT SELECT, INSERT, UPDATE, DELETE ON "ServiceOrders" TO taller_app_rol;
+GRANT SELECT, INSERT, UPDATE, DELETE ON "Service" TO taller_app_rol;
+GRANT SELECT, INSERT, UPDATE, DELETE ON "Sessions" TO taller_app_rol;
+GRANT SELECT, INSERT, UPDATE, DELETE ON "users" TO taller_app_rol;
+GRANT SELECT, INSERT, UPDATE, DELETE ON permisos_rol TO taller_app_rol;
 
 -- Ejecución de PL/SQL (sin modificación)
-GRANT EXECUTE ON fn_tiene_permiso TO taller_app;
-GRANT EXECUTE ON fn_calcular_total_orden TO taller_app;
-GRANT EXECUTE ON sp_cerrar_orden TO taller_app;
+GRANT EXECUTE ON fn_tiene_permiso TO taller_app_rol;
+GRANT EXECUTE ON fn_calcular_total_orden TO taller_app_rol;
+GRANT EXECUTE ON sp_cerrar_orden TO taller_app_rol;
+GRANT EXECUTE ON sp_transferir_servicio TO taller_app_rol;
+GRANT EXECUTE ON sp_log_transferencia TO taller_app_rol;
 
 -- Consulta de vistas
-GRANT SELECT ON vw_resumen_clientes TO taller_app;
-GRANT SELECT ON vw_ordenes_activas TO taller_app;
-GRANT SELECT ON vm_metricas_taller TO taller_app;
+GRANT SELECT ON vw_resumen_clientes TO taller_app_rol;
+GRANT SELECT ON vw_ordenes_activas TO taller_app_rol;
+GRANT SELECT ON vm_metricas_taller TO taller_app_rol;
+
+-- Crear usuario y asignar rol (no grants directos al usuario)
+CREATE USER taller_app IDENTIFIED BY "TallerApp2026!";
+GRANT taller_app_rol TO taller_app;
 
 -- Cuota de almacenamiento
 ALTER USER taller_app QUOTA 100M ON USERS;
@@ -618,6 +726,8 @@ Datos de prueba insertados por la migración `c3d4e5f6a7b8_seed_data.py`:
 | Objeto | Tipo | Líneas | Propósito |
 |--------|------|--------|-----------|
 | `sp_cerrar_orden` | PROCEDURE | 35 | Cierre transaccional de órdenes |
+| `sp_transferir_servicio` | PROCEDURE | 40 | Transacción distribuida simulada |
+| `sp_log_transferencia` | PROCEDURE | 10 | Log autónomo (simula sistema remoto) |
 | `fn_calcular_total_orden` | FUNCTION | 10 | Suma de totales por orden |
 | `fn_tiene_permiso` | FUNCTION | 18 | Validación de bitmask permissions |
 | `vw_resumen_clientes` | VIEW | — | Métricas de clientes (compleja) |
@@ -641,7 +751,8 @@ Datos de prueba insertados por la migración `c3d4e5f6a7b8_seed_data.py`:
 | `alembic/versions/a1b2c3d4e5f6_correcciones_modelo.py` | Renombrar columnas, CHECK constraints, índices, UNIQUE compuesto |
 | `alembic/versions/b2c3d4e5f6a7_plsql_objects.py` | Todos los objetos PL/SQL (SP, funciones, vistas, triggers, tabla permisos) |
 | `alembic/versions/c3d4e5f6a7b8_seed_data.py` | Seed data de prueba |
-| `db/create_taller_app_user.sql` | Script para crear usuario con privilegios mínimos |
+| `alembic/versions/d4e5f6a7b8c9_roles_y_transaccion_distribuida.py` | Transacción distribuida simulada + roles |
+| `db/create_taller_app_user.sql` | Script para crear usuario con privilegios mínimos (vía roles) |
 
 ---
 
