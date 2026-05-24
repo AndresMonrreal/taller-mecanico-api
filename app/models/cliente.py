@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, DateTime ,ForeignKey
 from sqlalchemy.sql import func
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, deferred
 from app.core.db import Base
 
 class Client(Base):
@@ -11,8 +11,7 @@ class Client(Base):
     cli_phone = Column(String(10), unique = True, nullable = False)
     cli_email = Column(String(100), unique = True, nullable = False)
     cli_date_mod = Column(DateTime, default = func.now(), onupdate = func.now())
-    ses_id = Column(Integer, ForeignKey("Sessions.ses_id"), nullable=True)    
-    session = relationship("Session")
+    ses_id = deferred(Column(Integer, nullable=True))
     vehicles = relationship("Vehicle", back_populates = "client",cascade="all, delete-orphan")
     
 

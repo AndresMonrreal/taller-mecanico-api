@@ -29,6 +29,7 @@ class CRUDBase(Generic[ModelType]):
         return db.query(self.model).offset(skip).limit(limit).all()
     
     def create(self,db:Session,obj_in:dict) -> ModelType:
+        obj_in.pop("ses_id", None)
         db_obj = self.model(**obj_in)
         db.add(db_obj)
         db.commit()
@@ -36,6 +37,7 @@ class CRUDBase(Generic[ModelType]):
         return db_obj        
     
     def update(self,db:Session,db_obj:ModelType,obj_in:dict) -> ModelType:
+        obj_in.pop("ses_id", None)
         for field, value in obj_in.items():
             if value is not None:
                 setattr(db_obj, field, value)

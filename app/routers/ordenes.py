@@ -7,6 +7,7 @@ from app.dependencies import get_current_user
 from app.models.users import User
 from typing import List
 from sqlalchemy import text
+from pydantic import BaseModel
 
 
 router = APIRouter(prefix="/ordenes", tags=["ordenes"])
@@ -74,4 +75,54 @@ def get_total_orden(ord_id: int, db: Session = Depends(get_db), current_user: Us
     ).scalar()
     return {"ord_id": ord_id, "total": float(result or 0)}
 
+@router.patch("/{ord_id}/calcular-totales")
+def calcular_totales(ord_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    try:
+        db.execute(text("""
+            UPDATE "ServiceOrders" so
+            SET ords_total = so.ords_hours * (
+                SELECT srv_price_hour FROM "Service" WHERE srv_id = so.srv_id
+            )
+            WHERE so.ord_id = :ord_id
+            AND so.ords_total IS NULL
+        """), {"ord_id": ord_id})
+        db.commit()
+        return {"message": "Totales calculados"}
+    except Exception as e:
+        print(f"ERROR CALCULAR TOTALES: {e}")  # <-- esto
+        raise HTTPException(status_code=500, detail=str(e))
 
+class TransferirServicioIn(BaseModel):
+    srv_ord_id: int
+    ord_id_new: int
+    
+@router.post("/transferir-servicio")
+def transferir_servicio(
+    data: TransferirServicioIn,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+    ):
+    try:
+        conn = db.connection()
+        cursor = conn.connection.cursor()
+        mensaje = cursor.var(str)
+        cursor.callproc("sp_transferir_servicio", [data.srv_ord_id, data.ord_id_new, mensaje])
+        cursor.close()
+        db.commit()
+        return {"message": mensaje.getvalue()}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/{ord_id}/servicios")
+def get_servicios_orden(ord_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    result = db.execute(
+        text("""
+            SELECT so.srv_ord_id, so.srv_id, so.ords_hours, so.ords_total,
+                   s.srv_name, s.srv_price_hour
+            FROM "ServiceOrders" so
+            JOIN "Service" s ON so.srv_id = s.srv_id
+            WHERE so.ord_id = :ord_id
+        """),
+        {"ord_id": ord_id}
+    ).mappings().all()
+    return [dict(r) for r in result]

@@ -30,7 +30,7 @@ def estimar_horas(req: EstimarRequest):
     )
     
     data = response.json()
-    print(f"OpenAI response: {data}")  # ← agrega esto
+    print(f"OpenAI response: {data}")  
     
     if "choices" not in data:
         raise HTTPException(status_code=500, detail=data.get("error", {}).get("message", "Error OpenAI"))

@@ -14,11 +14,14 @@ class CRUDOrden(CRUDBase[Order]):
 
     def create_with_services(self, db: Session, order_data: dict, services: list):
         try:
+            #Hcemos un savepoint para manejar la transacción
             db.begin_nested()
+            #Creamos la orden con los datos proporcionados
             order = Order(**order_data)
             db.add(order)
+            #Despues de insertar la orden, hacemos flush para obtener el ord_id generado
             db.flush()
-
+            #insertamos los servicios asociados a la orden
             for srv in services:
                 service = db.query(Service).filter(Service.srv_id == srv['srv_id']).first()
                 if service:
@@ -30,7 +33,7 @@ class CRUDOrden(CRUDBase[Order]):
                         ords_total=total
                     )
                     db.add(orden_srv)
-
+            
             db.commit()
             db.refresh(order)
             return order

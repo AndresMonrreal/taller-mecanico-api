@@ -9,4 +9,3 @@ class User(Base):
     usr_username = Column(String(100), unique=True, nullable=False)
     usr_password = Column(String(255), nullable=False)
     usr_rol = Column(String(50), nullable=False, default="reception")
-    ses_id = Column(Integer, ForeignKey("Sessions.ses_id"), nullable=True)
