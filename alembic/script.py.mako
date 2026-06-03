@@ -1,4 +1,9 @@
-"""${message}
+"""
+${message}
+
+Template de migración Alembic.
+Las variables ${...} son reemplazadas por Alembic al generar una nueva migración
+con: alembic revision --autogenerate -m "mensaje"
 
 Revision ID: ${up_revision}
 Revises: ${down_revision | comma,n}
@@ -11,6 +16,7 @@ from alembic import op
 import sqlalchemy as sa
 ${imports if imports else ""}
 
+# Identificadores de la migración
 revision: str = ${repr(up_revision)}
 down_revision: Union[str, None] = ${repr(down_revision)}
 branch_labels: Union[str, Sequence[str], None] = ${repr(branch_labels)}
@@ -18,8 +24,10 @@ depends_on: Union[str, Sequence[str], None] = ${repr(depends_on)}
 
 
 def upgrade() -> None:
+    """Aplica los cambios de esta migración."""
     ${upgrades if upgrades else "pass"}
 
 
 def downgrade() -> None:
+    """Deshace los cambios de esta migración."""
     ${downgrades if downgrades else "pass"}

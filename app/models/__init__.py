@@ -1,3 +1,7 @@
+"""
+Exportación centralizada de todos los modelos SQLAlchemy.
+Facilita los imports desde otros módulos del proyecto.
+"""
 from app.models.sesion import Session
 from app.models.users import User
 from app.models.cliente import Client

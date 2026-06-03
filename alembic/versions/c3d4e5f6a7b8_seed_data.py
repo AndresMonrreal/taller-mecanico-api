@@ -30,29 +30,41 @@ def _safe(sql: str) -> None:
 
 
 def upgrade() -> None:
+    # --- Sesiones de prueba ---
+    # Se insertan 3 sesiones para asociar los seed data a usuarios específicos.
     _safe("""INSERT INTO "Sessions" (ses_id, ses_usuario) VALUES (1, 'admin')""")
     _safe("""INSERT INTO "Sessions" (ses_id, ses_usuario) VALUES (2, 'mecanico')""")
     _safe("""INSERT INTO "Sessions" (ses_id, ses_usuario) VALUES (3, 'recepcion')""")
 
+    # --- Clientes de prueba ---
     _safe("""INSERT INTO "Clients" (cli_id, cli_name, cli_phone, cli_email, ses_id) VALUES (1, 'Juan Pérez', '5551112233', 'juan@email.com', 1)""")
     _safe("""INSERT INTO "Clients" (cli_id, cli_name, cli_phone, cli_email, ses_id) VALUES (2, 'María García', '5554445566', 'maria@email.com', 1)""")
     _safe("""INSERT INTO "Clients" (cli_id, cli_name, cli_phone, cli_email, ses_id) VALUES (3, 'Carlos López', '5557778899', 'carlos@email.com', 1)""")
 
+    # --- Vehículos de prueba ---
+    # Juan tiene 2 vehículos, María 2, Carlos 1.
     _safe("""INSERT INTO "Vehicles" (veh_id, veh_plate, veh_brand, veh_model, veh_year, cli_id, ses_id) VALUES (1, 'ABC123', 'Toyota', 'Corolla', 2020, 1, 1)""")
     _safe("""INSERT INTO "Vehicles" (veh_id, veh_plate, veh_brand, veh_model, veh_year, cli_id, ses_id) VALUES (2, 'DEF456', 'Honda', 'Civic', 2019, 1, 1)""")
     _safe("""INSERT INTO "Vehicles" (veh_id, veh_plate, veh_brand, veh_model, veh_year, cli_id, ses_id) VALUES (3, 'GHI789', 'Nissan', 'Versa', 2021, 2, 1)""")
     _safe("""INSERT INTO "Vehicles" (veh_id, veh_plate, veh_brand, veh_model, veh_year, cli_id, ses_id) VALUES (4, 'JKL012', 'Mazda', '3', 2022, 2, 1)""")
     _safe("""INSERT INTO "Vehicles" (veh_id, veh_plate, veh_brand, veh_model, veh_year, cli_id, ses_id) VALUES (5, 'MNO345', 'Ford', 'Focus', 2018, 3, 1)""")
 
+    # --- Servicios del catálogo ---
     _safe("""INSERT INTO "Service" (srv_id, srv_name, srv_price_hour, ses_id) VALUES (1, 'Cambio de Aceite', 150.00, 1)""")
     _safe("""INSERT INTO "Service" (srv_id, srv_name, srv_price_hour, ses_id) VALUES (2, 'Frenos', 250.00, 1)""")
     _safe("""INSERT INTO "Service" (srv_id, srv_name, srv_price_hour, ses_id) VALUES (3, 'Alineación', 200.00, 1)""")
     _safe("""INSERT INTO "Service" (srv_id, srv_name, srv_price_hour, ses_id) VALUES (4, 'Diagnóstico', 300.00, 1)""")
 
+    # --- Órdenes de trabajo de prueba ---
+    # Orden 1: abierta, vehículo 1 (Toyota de Juan). Orden 2: en proceso, urgente, vehículo 3 (Nissan de María).
+    # Orden 3: cerrada (2 días antes), vehículo 5 (Ford de Carlos).
     _safe("""INSERT INTO "Orders" (ord_id, ord_date, ord_status, ord_urgency, ses_id, veh_id) VALUES (1, CURRENT_TIMESTAMP, 'ABIERTA', 'normal', 1, 1)""")
     _safe("""INSERT INTO "Orders" (ord_id, ord_date, ord_status, ord_urgency, ses_id, veh_id) VALUES (2, CURRENT_TIMESTAMP, 'EN_PROCESO', 'urgente', 2, 3)""")
     _safe("""INSERT INTO "Orders" (ord_id, ord_date, ord_status, ord_urgency, ses_id, veh_id) VALUES (3, CURRENT_TIMESTAMP - 2, 'CERRADA', 'normal', 3, 5)""")
 
+    # --- Detalle de servicios por orden ---
+    # Orden 1: 2 servicios (1 con total, 1 pendiente). Orden 2: 3 servicios (1 pendiente).
+    # Orden 3: 3 servicios (todos con total, está cerrada).
     _safe("""INSERT INTO "ServiceOrders" (ord_id, srv_id, ords_hours, ords_total, ses_id) VALUES (1, 1, 2.0, 300.00, 1)""")
     _safe("""INSERT INTO "ServiceOrders" (ord_id, srv_id, ords_hours, ords_total, ses_id) VALUES (1, 3, 1.0, NULL, 1)""")
     _safe("""INSERT INTO "ServiceOrders" (ord_id, srv_id, ords_hours, ords_total, ses_id) VALUES (2, 2, 1.5, 375.00, 2)""")
@@ -62,6 +74,10 @@ def upgrade() -> None:
     _safe("""INSERT INTO "ServiceOrders" (ord_id, srv_id, ords_hours, ords_total, ses_id) VALUES (3, 2, 2.0, 500.00, 3)""")
     _safe("""INSERT INTO "ServiceOrders" (ord_id, srv_id, ords_hours, ords_total, ses_id) VALUES (3, 4, 1.5, 450.00, 3)""")
 
+    # --- Usuarios del sistema ---
+    # Passwords hasheadas con bcrypt (12 rondas).
+    # NOTA: La tabla "users" se consulta SIN comillas dobles porque
+    # SQLAlchemy la creó como USERS (uppercase) en Oracle.
     _safe("INSERT INTO users (usr_id, usr_username, usr_password, usr_rol, ses_id) VALUES (1, 'admin', '$2b$12$Fn3BAL2w4ZI6RSXnRhkJMuAQpfWT.I7lwDxGp0PK3qYGj8LyfICpK', 'admin', 1)")
     _safe("INSERT INTO users (usr_id, usr_username, usr_password, usr_rol, ses_id) VALUES (2, 'mecanico', '$2b$12$AiVMysxKsAO.YJ6lMTw/6.R6TeBt0KkBOVXUafIaQn9e9Qb.xTvBm', 'mecanico', 2)")
     _safe("INSERT INTO users (usr_id, usr_username, usr_password, usr_rol, ses_id) VALUES (3, 'recepcion', '$2b$12$TaFUOOlNo4lrX1Kd58xmY.XV4BfjJRo4qPEK/K4sCVetmmvBRyaBu', 'recepcion', 3)")

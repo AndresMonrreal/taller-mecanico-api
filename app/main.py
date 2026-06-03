@@ -10,7 +10,10 @@ from app.middleware.logging_middleware import log_requests
 
 from app.routers import clientes, vehiculos, ordenes, servicios, auth, ia
 
+# Instancia principal de la aplicación FastAPI
 app = FastAPI(title=settings.PROJECT_NAME)
+
+# Configuración de CORS: permite peticiones desde los frontends en desarrollo
 app.add_middleware(CORSMiddleware,
     allow_origins=[
         "http://localhost:5173",
@@ -27,12 +30,15 @@ app.add_middleware(CORSMiddleware,
     allow_headers=["*"]
 )
 
+# Middleware personalizado para logging de requests
 app.add_middleware(BaseHTTPMiddleware, dispatch=log_requests)
 
+# Manejadores globales de excepciones
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
 app.add_exception_handler(SQLAlchemyError, sqlalchemy_exception_handler)
 app.add_exception_handler(Exception, generic_exception_handler)
 
+# Registro de todos los routers bajo el prefijo /api/v1
 app.include_router(auth.router, prefix=settings.API_V1_STR)
 app.include_router(clientes.router, prefix=settings.API_V1_STR)
 app.include_router(vehiculos.router, prefix=settings.API_V1_STR)
@@ -40,6 +46,8 @@ app.include_router(ordenes.router, prefix=settings.API_V1_STR)
 app.include_router(servicios.router, prefix=settings.API_V1_STR)
 app.include_router(ia.router, prefix=settings.API_V1_STR)
 
+
 @app.get("/")
 def root():
+    """Endpoint raíz de verificación de estado del servidor."""
     return {"message": f"{settings.PROJECT_NAME} corriendo"}

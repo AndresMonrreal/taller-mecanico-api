@@ -27,6 +27,10 @@ def _safe(sql: str) -> None:
 
 
 def upgrade() -> None:
+    # --- Procedimiento: sp_log_transferencia ---
+    # Simula un log en un sistema remoto usando PRAGMA AUTONOMOUS_TRANSACTION.
+    # Esto permite que el COMMIT de este log sea independiente de la transacción principal.
+    # Se usa como demostración del concepto de transacción distribuida.
     _safe("""
         CREATE OR REPLACE PROCEDURE sp_log_transferencia(
             p_srv_ord_id IN NUMBER,
@@ -42,6 +46,13 @@ def upgrade() -> None:
         END sp_log_transferencia;
     """)
 
+    # --- Procedimiento: sp_transferir_servicio ---
+    # Simula una transacción distribuida: transfiere un servicio de una orden a otra.
+    #   - Valida que la orden destino no esté cerrada.
+    #   - Actualiza el ord_id en ServiceOrders.
+    #   - Llama a sp_log_transferencia (autonomous transaction) para simular un log remoto.
+    #   - Usa SAVEPOINT para rollback parcial en caso de error.
+    # Escenario: un servicio se asignó a la orden equivocada y debe reasignarse.
     _safe("""
         CREATE OR REPLACE PROCEDURE sp_transferir_servicio(
             p_srv_ord_id  IN NUMBER,
@@ -88,5 +99,6 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    # Elimina los procedimientos de transacción distribuida.
     _safe("DROP PROCEDURE sp_transferir_servicio")
     _safe("DROP PROCEDURE sp_log_transferencia")
